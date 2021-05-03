@@ -1,0 +1,26 @@
+TOPIC
+    about_MyModule
+
+SHORT DESCRIPTION
+    MyModule is a test module to document the integration of Sampler.
+
+LONG DESCRIPTION
+    MyModule is a test module to document the integration of Sampler and adopt a CICD pipeline.
+
+EXAMPLES
+    PS C:\> Get-PublicFunction -Input1 'Hello' -Input2 'World'
+
+    PS C:\> Get-PublicFunctionTwo
+
+NOTE:
+    Thank you to all those who contributed to this module, by writing code, sharing opinions, and provided feedback.
+
+TROUBLESHOOTING NOTE:
+    Look out on the Github repository for issues and new releases.
+
+SEE ALSO
+  - https://github.com/phbits/MyModule
+
+KEYWORDS
+      'Sampler','CICD','Pipeline'
+
