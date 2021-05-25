@@ -3,7 +3,6 @@ next-version: 0.1.0.0
 major-version-bump-message: '\s?(breaking|major|breaking\schange)'
 minor-version-bump-message: '\s?(add|feature|minor)'
 patch-version-bump-message: '\s?(fix|patch)'
-support-version-bump-message: '\s?(support)'
 no-bump-message: '\+semver:\s?(none|skip)'
 assembly-informational-format: '{NuGetVersionV2}+Sha.{Sha}.Date.{CommitDate}'
 branches:
