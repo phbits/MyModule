@@ -2,4 +2,4 @@
 
 Welcome to `MyModule` v#.#.# wiki pages!
 
-Update!
+Update after fixing azure pipelines variable.
