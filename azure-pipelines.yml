@@ -10,6 +10,10 @@ trigger:
     - "v*"
     exclude:
     - "*-*"
+variables:
+  buildFolderName: output
+  buildArtifactName: output
+  testResultFolderName: testResults
 
 stages:
   - stage: Build
@@ -34,82 +38,37 @@ stages:
               arguments: '-ResolveDependency -tasks pack'
               pwsh: true
             env:
-              ModuleVersion: $(gitVersion.NuGetVersionV2)
+              ModuleVersion: $(gitVersion.InformationalVersion)
 
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Pipeline Artifact'
             inputs:
-              targetPath: 'output/'
-              artifact: 'output'
+              targetPath: '$(buildArtifactName)/'
+              artifact: '$(buildArtifactName)'
               publishLocation: 'pipeline'
               parallel: true
 
   - stage: Test
     dependsOn: Build
     jobs:
-      - job: test_linux
-        displayName: 'Linux'
-        timeoutInMinutes: 0
-        pool:
-          vmImage: 'ubuntu 16.04'
-        steps:
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download Pipeline Artifact'
-            inputs:
-              buildType: 'current'
-              artifactName: 'output'
-              targetPath: '$(Build.SourcesDirectory)/output'
-
-          - powershell: |
-              $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
-              echo "##vso[task.setvariable variable=RepositoryOwner;isOutput=true]$repositoryOwner"
-              echo "##vso[task.setvariable variable=RepositoryName;isOutput=true]$repositoryName"
-            name: dscBuildVariable
-            displayName: 'Set Environment Variables'
-
-          - task: PowerShell@2
-            name: test
-            displayName: 'Run Tests'
-            inputs:
-              filePath: './build.ps1'
-              arguments: '-tasks test'
-
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
-            condition: succeededOrFailed()
-            inputs:
-              testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
-              testRunTitle: 'Linux'
-
-          - task: PublishCodeCoverageResults@1
-            displayName: 'Publish Code Coverage'
-            condition: succeededOrFailed()
-            inputs:
-              codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
-
-      - job: test_windows_core
+          - job: test_windows_core
         displayName: 'Windows (PowerShell Core)'
         timeoutInMinutes: 0
         pool:
-          vmImage: 'windows-latest'
+          vmImage: 'windows-2019'
         steps:
           - task: DownloadPipelineArtifact@2
             displayName: 'Download Pipeline Artifact'
             inputs:
               buildType: 'current'
-              artifactName: 'output'
-              targetPath: '$(Build.SourcesDirectory)/output'
-
+              artifactName: $(buildArtifactName)
+              targetPath: '$(Build.SourcesDirectory)/$(buildArtifactName)'
           - powershell: |
               $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
               echo "##vso[task.setvariable variable=RepositoryOwner;isOutput=true]$repositoryOwner"
               echo "##vso[task.setvariable variable=RepositoryName;isOutput=true]$repositoryName"
             name: dscBuildVariable
             displayName: 'Set Environment Variables'
-
           - task: PowerShell@2
             name: test
             displayName: 'Run Tests'
@@ -123,7 +82,7 @@ stages:
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
+              testResultsFiles: '$(buildArtifactName)/testResults/NUnit*.xml'
               testRunTitle: 'Windows Server Core (PowerShell Core)'
 
           - task: PublishCodeCoverageResults@1
@@ -131,8 +90,52 @@ stages:
             condition: succeededOrFailed()
             inputs:
               codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
+              summaryFileLocation: '$(buildArtifactName)/testResults/CodeCov*.xml'
+              pathToSources: '$(Build.SourcesDirectory)/$(buildArtifactName)/$(dscBuildVariable.RepositoryName)'
+
+      - job: test_linux
+        displayName: 'Linux'
+        timeoutInMinutes: 0
+        pool:
+          vmImage: 'ubuntu 16.04'
+        steps:
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Pipeline Artifact'
+            inputs:
+              buildType: 'current'
+              artifactName: $(buildArtifactName)
+              targetPath: '$(Build.SourcesDirectory)/$(buildArtifactName)'
+
+          - powershell: |
+              $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
+              echo "##vso[task.setvariable variable=RepositoryOwner;isOutput=true]$repositoryOwner"
+              echo "##vso[task.setvariable variable=RepositoryName;isOutput=true]$repositoryName"
+            name: dscBuildVariable
+            displayName: 'Set Environment Variables'
+
+          - task: PowerShell@2
+            name: test
+            displayName: 'Run Tests'
+            inputs:
+              filePath: './build.ps1'
+              arguments: '-tasks test'
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'NUnit'
+              testResultsFiles: '$(buildArtifactName)/testResults/NUnit*.xml'
+              testRunTitle: 'Linux'
+
+          - task: PublishCodeCoverageResults@1
+            displayName: 'Publish Code Coverage'
+            condition: succeededOrFailed()
+            inputs:
+              codeCoverageTool: 'JaCoCo'
+              summaryFileLocation: '$(buildArtifactName)/testResults/CodeCov*.xml'
+              pathToSources: '$(Build.SourcesDirectory)/$(buildArtifactName)/$(dscBuildVariable.RepositoryName)'
+
 
       - job: test_windows_ps
         displayName: 'Windows (Windows PowerShell)'
@@ -144,8 +147,8 @@ stages:
             displayName: 'Download Pipeline Artifact'
             inputs:
               buildType: 'current'
-              artifactName: 'output'
-              targetPath: '$(Build.SourcesDirectory)/output'
+              artifactName: '$(buildArtifactName)'
+              targetPath: '$(Build.SourcesDirectory)/$(buildArtifactName)'
 
           - powershell: |
               $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
@@ -167,7 +170,7 @@ stages:
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
+              testResultsFiles: '$(buildArtifactName)/testResults/NUnit*.xml'
               testRunTitle: 'Windows Server Core (Windows PowerShell)'
 
           - task: PublishCodeCoverageResults@1
@@ -175,8 +178,8 @@ stages:
             condition: succeededOrFailed()
             inputs:
               codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
+              summaryFileLocation: '$(buildArtifactName)/testResults/CodeCov*.xml'
+              pathToSources: '$(Build.SourcesDirectory)/$(buildArtifactName)/$(dscBuildVariable.RepositoryName)'
 
       - job: test_macos
         displayName: 'macOS'
@@ -188,8 +191,8 @@ stages:
             displayName: 'Download Pipeline Artifact'
             inputs:
               buildType: 'current'
-              artifactName: 'output'
-              targetPath: '$(Build.SourcesDirectory)/output'
+              artifactName: '$(buildArtifactName)'
+              targetPath: '$(Build.SourcesDirectory)/$(buildArtifactName)'
 
           - powershell: |
               $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
@@ -211,7 +214,7 @@ stages:
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
+              testResultsFiles: '$(buildArtifactName)/testResults/NUnit*.xml'
               testRunTitle: 'MacOS'
 
           - task: PublishCodeCoverageResults@1
@@ -219,8 +222,8 @@ stages:
             condition: succeededOrFailed()
             inputs:
               codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
+              summaryFileLocation: '$(buildArtifactName)/testResults/CodeCov*.xml'
+              pathToSources: '$(Build.SourcesDirectory)/$(buildArtifactName)/$(dscBuildVariable.RepositoryName)'
 
   - stage: Deploy
     dependsOn: Test
@@ -243,8 +246,8 @@ stages:
             displayName: 'Download Pipeline Artifact'
             inputs:
               buildType: 'current'
-              artifactName: 'output'
-              targetPath: '$(Build.SourcesDirectory)/output'
+              artifactName: '$(buildArtifactName)'
+              targetPath: '$(Build.SourcesDirectory)/$(buildArtifactName)'
           - task: PowerShell@2
             name: publishRelease
             displayName: 'Publish Release'
@@ -255,6 +258,8 @@ stages:
             env:
               GitHubToken: $(GitHubToken)
               GalleryApiToken: $(GalleryApiToken)
+              ReleaseBranch: main
+              MainGitBranch: main          
           - task: PowerShell@2
             name: sendChangelogPR
             displayName: 'Send Changelog PR'
@@ -264,4 +269,5 @@ stages:
               pwsh: true
             env:
               GitHubToken: $(GitHubToken)
-
+              ReleaseBranch: main
+              MainGitBranch: main
